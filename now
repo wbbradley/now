@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Copyright 2019 William Bradley.
 
@@ -29,30 +29,32 @@ function realpath() {
   fi
 }
 
-if ! [ -x ./now ]; then
-  echo "You must run ./now from its directory. Try cd'ing to the dir prior to running ./now."
-  exit 1
-fi
-
 if [ -f ".nowrc" ]; then
   # shellcheck disable=SC1091
   . .nowrc
 fi
-
 BUILDERS_DIR="${BUILDERS_DIR:-builders}"
+
+if [ ! -d "$BUILDERS_DIR" ]; then
+  printf "Could not find a '%s' directory.\n" "$BUILDERS_DIR"
+  exit 1
+fi
 
 unalias now 2>/dev/null ||:
 
 # Expose the functionality of the program to other builders so that then can
 # call back in to other builders if necessary.
 function now() {
+  if ! [[ $BASH_VERSION == 4* ]]; then
+    echo "Bash version $BASH_VERSION is not supported by 'now'."
+    exit 1
+  fi
+
   action_name=$1
   builder_name=$2
   shift 2
 
   if [ "$builder_name" != "" ] && [ -f "$BUILDERS_DIR/$builder_name" ]; then
-    echo "Trying to $action_name $builder_name..."
-
     (
       # shellcheck disable=SC1090
       . "$BUILDERS_DIR/$builder_name"
@@ -79,7 +81,7 @@ function now() {
           # Don't list private builders.
           continue
         fi
-        sed -Ene 's/function +([a-zA-Z_-]+).*/\1/p' "$b" | \
+        sed -Ene 's/function ([a-zA-Z_-]+).*/\1/p' "$b" | \
           awk -v filename="$b" \
             '$1 !~ /^_.*$/ {
               name=$1
