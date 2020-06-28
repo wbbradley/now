@@ -60,6 +60,9 @@ function now() {
       . "$BUILDERS_DIR/$builder_name"
 
       prior_cwd="$(pwd)"
+      if [ -n "$V" ]; then
+        echo "$action_name $builder_name $*" || exit 1
+      fi
       eval "$action_name $*" || exit 1
       if [ "$PWD" != "$prior_cwd" ]; then
         echo "BUGBUG: $action_name did not properly restore the directory back to $prior_cwd."
